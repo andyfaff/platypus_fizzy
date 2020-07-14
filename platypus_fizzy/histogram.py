@@ -1,15 +1,15 @@
 import urllib
-import zlib
+import gzip
 
 import numpy as np
 from platypus_fizzy.config import dae_config
 
 
 # grab DAE server setup from config
-ip = dae_config['ip']
-port = dae_config['port']
-auth_user = dae_config['user']
-auth_password = dae_config['password']
+ip = dae_config["ip"]
+port = dae_config["port"]
+auth_user = dae_config["user"]
+auth_password = dae_config["password"]
 
 
 # register for basic authentication
@@ -28,8 +28,9 @@ HISTOGRAM_VIEWS = {
     "TOTAL_HISTOGRAM_YT": ["OAT_NYC", "OAT_NTC"],
     "TOTAL_HISTOGRAM_T": ["OAT_NTC"],
     "TOTAL_HISTOGRAM_X": ["OAT_NXC"],
-    "TOTAL_HISTOGRAM_Y": ["OAT_NYC"]
+    "TOTAL_HISTOGRAM_Y": ["OAT_NYC"],
 }
+
 
 def detector_image(view="TOTAL_HISTOGRAM_YT"):
     """
@@ -53,8 +54,9 @@ def detector_image(view="TOTAL_HISTOGRAM_YT"):
         detector image
     """
     if view not in HISTOGRAM_VIEWS:
-        raise ValueError(f"view should be one of "
-                         f"{list(HISTOGRAM_VIEWS.keys())}")
+        raise ValueError(
+            f"view should be one of " f"{list(HISTOGRAM_VIEWS.keys())}"
+        )
 
     stat = status()
     axes = HISTOGRAM_VIEWS[view]
@@ -68,7 +70,7 @@ def detector_image(view="TOTAL_HISTOGRAM_YT"):
     with urllib.request.urlopen(request) as result:
         compressed_image = result.read()
 
-    buf = zlib.decompress(compressed_image)
+    buf = gzip.decompress(compressed_image)
     hmm = np.frombuffer(buf, dtype=np.int32)
     return np.reshape(hmm, shape)
 
@@ -82,7 +84,9 @@ def status():
         Information on the histogram status
 
     """
-    request = urllib.request.Request(f"http://{ip}:{port}/admin/textstatus.egi")
+    request = urllib.request.Request(
+        f"http://{ip}:{port}/admin/textstatus.egi"
+    )
 
     d = {}
     with urllib.request.urlopen(request) as result:
@@ -108,15 +112,15 @@ def acquisition_status():
         0 - stopped
         1 - acquiring
     """
-    stat = status()['DAQ']
+    stat = status()["DAQ"]
 
     if stat == "Stopped":
         return 0
-    elif stat == 'Started':
+    elif stat == "Started":
         return 1
     elif stat == "Paused":
         return -2
-    elif stat == 'Starting':
+    elif stat == "Starting":
         return -1
     else:
         return -3
