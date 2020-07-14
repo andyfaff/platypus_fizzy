@@ -22,13 +22,13 @@ urllib.request.install_opener(opener)
 
 
 HISTOGRAM_VIEWS = {
-    "TOTAL_HISTOGRAM_XYT": ["x_bin", "y_bin", "time_of_flight"],
-    "TOTAL_HISTOGRAM_XY": ["x_bin", "y_bin"],
-    "TOTAL_HISTOGRAM_XT": ["x_bin", "time_of_flight"],
-    "TOTAL_HISTOGRAM_YT": ["y_bin", "time_of_flight"],
-    "TOTAL_HISTOGRAM_T": ["time_of_flight"],
-    "TOTAL_HISTOGRAM_X": ["x_bin"],
-    "TOTAL_HISTOGRAM_Y": ["y_bin"]
+    "TOTAL_HISTOGRAM_XYT": ["OAT_NXC", "OAT_NYC", "OAT_NTC"],
+    "TOTAL_HISTOGRAM_XY": ["OAT_NXC", "OAT_NYC"],
+    "TOTAL_HISTOGRAM_XT": ["OAT_NXC", "OAT_NTC"],
+    "TOTAL_HISTOGRAM_YT": ["OAT_NYC", "OAT_NTC"],
+    "TOTAL_HISTOGRAM_T": ["OAT_NTC"],
+    "TOTAL_HISTOGRAM_X": ["OAT_NXC"],
+    "TOTAL_HISTOGRAM_Y": ["OAT_NYC"]
 }
 
 def detector_image(view="TOTAL_HISTOGRAM_YT"):
@@ -56,6 +56,10 @@ def detector_image(view="TOTAL_HISTOGRAM_YT"):
         raise ValueError(f"view should be one of "
                          f"{list(HISTOGRAM_VIEWS.keys())}")
 
+    stat = status()
+    axes = HISTOGRAM_VIEWS[view]
+    shape = [int(stat[axis]) for axis in axes]
+
     request = (
         f"http://{ip}:{port}/admin/savedataview.egi?"
         f"data_saveopen_format=ZIPBIN&data_saveopen_action=OPENONLY&"
@@ -66,7 +70,7 @@ def detector_image(view="TOTAL_HISTOGRAM_YT"):
 
     buf = zlib.decompress(compressed_image)
     hmm = np.frombuffer(buf, dtype=np.int32)
-    return hmm
+    return np.reshape(hmm, shape)
 
 
 def status():
