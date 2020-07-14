@@ -1,5 +1,6 @@
 import urllib
-import base64
+import zlib
+
 from platypus_fizzy.config import dae_config
 
 
@@ -19,6 +20,54 @@ opener = urllib.request.build_opener(authhandler)
 urllib.request.install_opener(opener)
 
 
+HISTOGRAM_VIEWS = {
+    "TOTAL_HISTOGRAM_XYT": ["x_bin", "y_bin", "time_of_flight"],
+    "TOTAL_HISTOGRAM_XY": ["x_bin", "y_bin"],
+    "TOTAL_HISTOGRAM_XT": ["x_bin", "time_of_flight"],
+    "TOTAL_HISTOGRAM_YT": ["y_bin", "time_of_flight"],
+    "TOTAL_HISTOGRAM_T": ["time_of_flight"],
+    "TOTAL_HISTOGRAM_X": ["x_bin"],
+    "TOTAL_HISTOGRAM_Y": ["y_bin"]
+}
+
+def detector_image(view="TOTAL_HISTOGRAM_YT"):
+    """
+    Get the current detector image
+
+    Parameters
+    ----------
+    view : str
+        One of:
+            - 'TOTAL_HISTOGRAM_XYT'
+            - 'TOTAL_HISTOGRAM_XY'
+            - 'TOTAL_HISTOGRAM_XT'
+            - 'TOTAL_HISTOGRAM_YT'
+            - 'TOTAL_HISTOGRAM_T'
+            - 'TOTAL_HISTOGRAM_X'
+            - 'TOTAL_HISTOGRAM_Y'
+
+    Returns
+    -------
+    hmm : np.ndarray
+        detector image
+    """
+    if view not in HISTOGRAM_VIEWS:
+        raise ValueError(f"view should be one of "
+                         f"{list(HISTOGRAM_VIEWS.keys())}")
+
+    request = (
+        f"http://{ip}:{port}/admin/savedataview.egi?"
+        f"data_saveopen_format=ZIPBIN&data_saveopen_action=OPENONLY&"
+        f"type={view}"
+    )
+    with urllib.request.urlopen(request) as result:
+        compressed_image = result.read()
+
+    buf = zlib.decompress(compressed_image)
+    hmm = np.frombuffer(buf, dtype=np.int32)
+    return hmm
+
+
 def status():
     """
     Find the status of the histogram server from the textstatus.egi page
@@ -28,11 +77,6 @@ def status():
         Information on the histogram status
 
     """
-    ip = dae_config['ip']
-    port = dae_config['port']
-    user = dae_config['user']
-    password = dae_config['password']
-
     request = urllib.request.Request(f"http://{ip}:{port}/admin/textstatus.egi")
 
     d = {}
@@ -44,3 +88,30 @@ def status():
             d[key] = val
 
     return d
+
+
+def acquisition_status():
+    """
+    Whether the histogram server is currently acquiring
+
+    Returns
+    -------
+    status : int
+       -3 - undetermined
+       -2 - paused
+       -1 - starting
+        0 - stopped
+        1 - acquiring
+    """
+    stat = status()['DAQ']
+
+    if stat == "Stopped":
+        return 0
+    elif stat == 'Started':
+        return 1
+    elif stat == "Paused":
+        return -2
+    elif stat == 'Starting':
+        return -1
+    else:
+        return -3
