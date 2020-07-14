@@ -1,6 +1,7 @@
 import urllib
 import zlib
 
+import numpy as np
 from platypus_fizzy.config import dae_config
 
 
