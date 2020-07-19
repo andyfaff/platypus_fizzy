@@ -4,7 +4,6 @@ from platypus_fizzy.config import sics_config
 
 
 class Hipadaba(object):
-
     def __init__(self):
         # StreamReader/Writer
         self.reader = None
